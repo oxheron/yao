@@ -13,11 +13,11 @@ int main(void)
         {12, 13, 14, 15}
     };
 
-    std::cout << mat4(0, 1) << std::endl;
+    uint8_t* kptr = new uint8_t[16];
+    memcpy(kptr, "123i27939823213", 16);
 
-    auto array = gen_subst_table((uint8_t*) "123i27939823213");
-    for (uint8_t x : array)
-    {
-        std::cout << (int) x << std::endl;
-    }
+    auto array = gen_subst_tables(kptr);
+    auto [t_8x8, t_6x6] = gen_transpos_tables(kptr);
+
+    delete kptr;
 }
