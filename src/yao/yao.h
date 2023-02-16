@@ -118,12 +118,13 @@ private:
 
     // Tables for substitution and tranposition
     std::array<std::array<uint8_t, 256>, 6> subst_tables;
+    std::array<std::array<uint8_t, 256>, 6> reverse_subst_tables;
     std::array<std::array<uint8_t, 16>, 6> transpos_tables;
+    std::array<std::array<uint8_t, 16>, 6> reverse_transpos_tables;
     std::array<std::array<uint8_t, 4>, 6> randbit_tables;
 
     // The random shift data for the numbers
     duthomhas::csprng rng;
-
 public: 
     YaoCipher(); 
     YaoCipher(ykey_t k);
@@ -139,11 +140,14 @@ public:
     std::string decrypt(const std::string& input);
 
 private:
+public:
     // Does one round
     block round(block& input, size_t round_ct);
     // Undoes one round
-    block unround(block& input);
+    block unround(block& input, size_t round_ct);
 
     // Does substitution on a value based on the round count
     void substitute(uint8_t* input, size_t round_ct);
+    // Does reverse substitution on a value based on the round count
+    void reverse_substitute(uint8_t* input, size_t round_ct);
 };
