@@ -7,7 +7,7 @@ BIN = bin
 LIBS =
 
 INC_DIR_SRC = -Isrc 
-INC_DIR_LIB = -Ilib/eigen-3.4.0 -Ilib/xxHash
+INC_DIR_LIB = -Ilib/xxHash
 
 DEBUGFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -Wall -g
 RELEASEFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -O3
