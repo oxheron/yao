@@ -3,6 +3,7 @@
 // std
 #include <iostream>
 #include <chrono>
+#include <vector>
 
 struct Timer 
 {
@@ -16,21 +17,17 @@ struct Timer
 int main(void)
 {
     YaoCipher encrypt({12093, 12398});
-
-    block testi = {'a', '3', 'g', '3', '1', 'b', 'X', 'A', 'a', '3', 'g', '3', '1', 'b', 'X', 'A'};
     
     Timer timer;
     timer.set_time();
-    encrypt.encrypt(testi);
-    timer.print_time();
-    encrypt.decrypt(testi);
-    
-    timer.set_time();
+    std::vector<uint32_t> test = {23, 123, 98, 28, 123, 89, 23, 2, 74, 23, 123, 98, 28, 123, 89, 23, 2, 74};
+    encrypt.encrypt(test.data(), 16);
     timer.print_time();
 
-    for (auto x : testi)
+    encrypt.decrypt(test.data(), 16);
+
+    for (auto x : test)
     {
-        std::cout << (char) x << ", ";
+        std::cout << x << std::endl;
     }
-
 }

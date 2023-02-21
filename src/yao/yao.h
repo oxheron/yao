@@ -16,7 +16,7 @@ using ykey_t = XXH128_hash_t;
 using block = std::array<uint32_t, 16>;
 
 // Function to remove and insert bits into an integer
-uint32_t insert_bit(uint32_t n, size_t position, bool bit) 
+inline uint32_t insert_bit(uint32_t n, size_t position, bool bit) 
 {
     uint32_t y = n;
     uint32_t x = n << 1;
@@ -30,7 +30,7 @@ uint32_t insert_bit(uint32_t n, size_t position, bool bit)
     return x;
 }
 
-uint32_t remove_bit(uint32_t n, size_t position)
+inline uint32_t remove_bit(uint32_t n, size_t position)
 {
     return (~((uint32_t) (1 << (position)) - 1) & (n >> 1)) | (n & ((1 << (position)) - 1));
 }
@@ -144,113 +144,39 @@ private:
     std::array<std::array<uint8_t, 16>, 3> rv_subst_tables_4;
 
     // Tables for transposition
-    std::array<std::array<uint8_t, 16>, 6> transpos_tables;
-    std::array<std::array<uint8_t, 16>, 6> reverse_transpos_tables;
+    std::array<uint8_t, 16> transpos_table;
+    std::array<uint8_t, 16> reverse_transpos_table;
 
     // Tables for what bits are random
     std::array<std::array<uint8_t, 4>, 6> randbit_tables;
 
     // The random shift data for the numbers
     duthomhas::csprng rng;
+    
+    // A block of data used to transpose
+    uint32_t* transpose_copy;
 public: 
     YaoCipher(); 
     YaoCipher(ykey_t k);
+    ~YaoCipher() { delete[] transpose_copy; }
 
     // Encrypt a block
-    template <typename T>
-    T encrypt(T& input)
-    {
-        for (size_t i = 0; i < 6; i++)
-        {
-            input = round(input, i);
-        }
-
-        return input;
-    }
-    // Encrypt a string
-    std::string encrypt(const std::string& input);
+    uint32_t* encrypt_block(uint32_t* input);
 
     // Decrypt a block
-    template <typename T>
-    T decrypt(T& input)
-    {
-        for (int i = 5; i >= 0; i--)
-        {
-            input = unround(input, i);
-        }
-
-        return input;
-    }
+    uint32_t* decrypt_block(uint32_t* input);
     
-    // Decrypt a string
-    std::string decrypt(const std::string& input);
+    // Encrypt a pointer of a certain size (HAS TO BE MULTIPLE OF 16 !!)
+    uint32_t* encrypt(uint32_t* input, size_t size);
+
+    // Decrypt a pointer of a certain size
+    uint32_t* decrypt(uint32_t* input, size_t size);
 
 private:
-public:
     // Does one round
-    template <typename T>
-    inline T round(T& input, size_t round_ct)
-    {
-        // Subsitute
-        for (auto& x : input)
-        {
-            substitute((uint8_t*) &x, round_ct);
-        }
-
-        // Transpose
-        auto copy(std::move(input));
-        input = block();
-
-        for (size_t i = 0; i < copy.size(); i++)
-        {
-            input[transpos_tables[round_ct][i]] = copy[i];
-        }
-
-        // Bitexpand
-        std::bitset<64> rng_bits = rng();
-        for (size_t i = 0; i < input.size(); i++)
-        {
-            // A bitset that has a fast operation to insert a bit and remove at the back
-            input[i] = insert_bit(input[i], randbit_tables[round_ct][0], rng_bits[i * 4]);
-            input[i] = insert_bit(input[i], randbit_tables[round_ct][1], rng_bits[i * 4 + 1]);
-            input[i] = insert_bit(input[i], randbit_tables[round_ct][2], rng_bits[i * 4 + 2]);
-            input[i] = insert_bit(input[i], randbit_tables[round_ct][3], rng_bits[i * 4 + 3]);
-        }
-
-        return input;
-    }
-
-    // Undoes one round
-    template <typename T>
-    inline T unround(T& input, size_t round_ct)
-    {
-        // Unbitexpand
-        for (size_t i = 0; i < input.size(); i++)
-        {
-            // A bitset that has a fast operation to insert a bit and remove at the back
-            input[i] = remove_bit(input[i], randbit_tables[round_ct][3]);
-            input[i] = remove_bit(input[i], randbit_tables[round_ct][2]);
-            input[i] = remove_bit(input[i], randbit_tables[round_ct][1]);
-            input[i] = remove_bit(input[i], randbit_tables[round_ct][0]);
-        }
-
-        // Reverse transpose
-        auto copy(std::move(input));
-        input = block();
-
-        for (size_t i = 0; i < copy.size(); i++)
-        {
-            input[reverse_transpos_tables[round_ct][i]] = copy[i];
-        }
-
-        // Reverse subsitute
-        for (auto& x : input)
-        {
-            reverse_substitute((uint8_t*) &x, round_ct);
-        }
-
-        return input;
-    }
+    uint32_t* round(uint32_t* input, size_t round_ct);
+    // Undoes a round
+    uint32_t* unround(uint32_t* input, size_t round_ct);
 
     // Does substitution on a value based on the round count
     void substitute(uint8_t* input, size_t round_ct);

@@ -4,9 +4,11 @@
 #include <algorithm>
 #include <bitset>
 #include <vector>
+#include <cstring>
 
 YaoCipher::YaoCipher()
 {
+    transpose_copy = new uint32_t[16];
     key = gen_key();
 
     // Generate the subsitution tables and the inverse substitution tables
@@ -33,15 +35,14 @@ YaoCipher::YaoCipher()
     ykey_t flipkey;
     flipkey.low64 = key.high64;
     flipkey.high64 = key.low64;
-    transpos_tables = gen_tables<16, 6>(flipkey);
-    for (size_t i = 0; i < 6; i++)
+    transpos_table = gen_rnd_array<16>(key);
+
+    for (size_t i = 0; i < 16; i++)
     {
-        for (size_t j = 0; j < 16; j++)
-        {
-            reverse_transpos_tables[i][transpos_tables[i][j]] = j;
-        }
+        reverse_transpos_table[transpos_table[i]] = i;
     }
 
+    // Generate bit expansion bits (the bits that will be random)
     randbit_tables = gen_bit_tables<32>(key);
 
     // Make sure randbit tables are sorted highest to lowest
@@ -53,6 +54,7 @@ YaoCipher::YaoCipher()
 
 YaoCipher::YaoCipher(ykey_t k)
 {
+    transpose_copy = new uint32_t[16];
     key = k;
 
     // Generate the subsitution tables and the inverse substitution tables
@@ -79,15 +81,14 @@ YaoCipher::YaoCipher(ykey_t k)
     ykey_t flipkey;
     flipkey.low64 = key.high64;
     flipkey.high64 = key.low64;
-    transpos_tables = gen_tables<16, 6>(flipkey);
-    for (size_t i = 0; i < 6; i++)
+    transpos_table = gen_rnd_array<16>(key);
+
+    for (size_t i = 0; i < 16; i++)
     {
-        for (size_t j = 0; j < 16; j++)
-        {
-            reverse_transpos_tables[i][transpos_tables[i][j]] = j;
-        }
+        reverse_transpos_table[transpos_table[i]] = i;
     }
 
+    // Generate bit expansion bits (the bits that will be random)
     randbit_tables = gen_bit_tables<32>(key);
 
     // Make sure randbit tables are sorted highest to lowest
@@ -97,29 +98,102 @@ YaoCipher::YaoCipher(ykey_t k)
     }
 }
 
-std::string YaoCipher::encrypt(const std::string& input)
+uint32_t* YaoCipher::round(uint32_t* input, size_t round_ct)
 {
-    for (size_t i = 0; i < input.size(); i++)
+    // Subsitute
+    for (size_t i = 0; i < 16; i++)
     {
-        if (input.size() - i < 16) 
-        {
-            std::vector<char> split(0, 16);
-            for (size_t j = i * 16; j < input.size(); j++)
-            {
-                split[j - i * 16] = input[j];
-            }
+        substitute((uint8_t*) (input + i), round_ct);
+    }
 
-
-            encrypt(split);
-        }
-        // Use std::vector<std::ref_wrapper>
-        std::vector<char> split(input.data() + i * 16)
-        split.resize(16);
-        encrypt(split);
+    // Bitexpand
+    std::bitset<64> rng_bits = rng();
+    for (size_t i = 0; i < 16; i++)
+    {
+        // A bitset that has a fast operation to insert a bit and remove at the back
+        input[i] = insert_bit(input[i], randbit_tables[round_ct][0], rng_bits[i * 4]);
+        input[i] = insert_bit(input[i], randbit_tables[round_ct][1], rng_bits[i * 4 + 1]);
+        input[i] = insert_bit(input[i], randbit_tables[round_ct][2], rng_bits[i * 4 + 2]);
+        input[i] = insert_bit(input[i], randbit_tables[round_ct][3], rng_bits[i * 4 + 3]);
     }
 
     return input;
 }
+
+// Undoes one round
+uint32_t* YaoCipher::unround(uint32_t* input, size_t round_ct)
+{
+    // Unbitexpand
+    for (size_t i = 0; i < 16; i++)
+    {
+        // A bitset that has a fast operation to insert a bit and remove at the back
+        input[i] = remove_bit(input[i], randbit_tables[round_ct][3]);
+        input[i] = remove_bit(input[i], randbit_tables[round_ct][2]);
+        input[i] = remove_bit(input[i], randbit_tables[round_ct][1]);
+        input[i] = remove_bit(input[i], randbit_tables[round_ct][0]);
+    }
+
+    // Reverse subsitute
+    for (size_t i = 0; i < 16; i++)
+    {
+        reverse_substitute((uint8_t*) (input + i), round_ct);
+    }
+
+    return input;
+}
+
+uint32_t* YaoCipher::encrypt_block(uint32_t* input)
+{
+    for (size_t i = 0; i < 6; i++)
+    {
+        round(input, i);
+    }
+
+    memcpy(transpose_copy, input, 64);
+    for (size_t i = 0; i < 16; i++)
+    {
+        input[i] = transpose_copy[transpos_table[i]];
+    }
+
+    return input;
+}
+
+uint32_t* YaoCipher::decrypt_block(uint32_t* input)
+{
+    for (int i = 5; i >= 0; i--)
+    {
+        input = unround(input, i);
+    }
+
+    memcpy(transpose_copy, input, 64);
+    for (size_t i = 0; i < 16; i++)
+    {
+        input[i] = transpose_copy[reverse_transpos_table[i]];
+    }
+
+    return input;
+}
+
+uint32_t* YaoCipher::encrypt(uint32_t* input, size_t size)
+{   
+    for (size_t i = 0; i < size; i+=16)
+    {
+        encrypt_block(input + i);
+    }
+
+    return input;
+}
+
+uint32_t* YaoCipher::decrypt(uint32_t* input, size_t size)
+{   
+    for (size_t i = 0; i < size; i+=16)
+    {
+        decrypt_block(input + i);
+    }
+
+    return input;
+}
+
 
 void YaoCipher::substitute(uint8_t* input, size_t round_ct)
 {

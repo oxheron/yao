@@ -36,7 +36,7 @@ obj: $(OBJ)
 asm: cleanassembly $(ASM)
 
 %.o: %.cpp
-	$(CC) -std=c++20 -o $@ -c $< $(DEBUGFLAGS)
+	$(CC) -std=c++20 -o $@ -c $< $(RELEASEFLAGS)
 
 build: dirs link
 
