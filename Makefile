@@ -1,5 +1,6 @@
 TARGET_EXEC = YAO
 CC = clang++
+AR = ar
 
 SRC = $(wildcard src/*.cpp) $(wildcard src/**/*.cpp) $(wildcard src/**/**/*.cpp) $(wildcard src/**/**/**/*.cpp)
 OBJ = $(SRC:.cpp=.o)
@@ -12,7 +13,7 @@ INC_DIR_LIB = -Ilib/xxHash
 DEBUGFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -Wall -g
 RELEASEFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -O3
 ASMFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIBS) -Wall
-LDFLAGS = $(LIBS) -lm lib/xxHash/libxxhash.a
+LDFLAGS = $(LIBS) 
 
 .PHONY: all libs clean test
 
@@ -24,7 +25,7 @@ dirs:
 	mkdir -p ./$(BIN)
 
 link: $(OBJ)
-	$(CC) -o $(BIN)/$(TARGET_EXEC) $^ $(LDFLAGS)
+	$(AR) -r $(BIN)/$(TARGET_EXEC).a $^ $(LDFLAGS)
 
 bld: 
 	$(MAKE) clean
