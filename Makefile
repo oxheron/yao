@@ -7,7 +7,7 @@ OBJ = $(SRC:.cpp=.o)
 BIN = bin
 LIBS =
 
-INC_DIR_SRC = -Isrc 
+INC_DIR_SRC = -Isrc -I.
 INC_DIR_LIB = -Ilib/xxHash
 
 DEBUGFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -Wall -g

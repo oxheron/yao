@@ -1,19 +1,18 @@
 #pragma once
 
-// XXhash library
-// Hopefully we will use our own hash at some point (forrus++)
 #include "xxhash.h"
-
-// Rng library
-#include "csprng/duthomhas/csprng.hpp"
 
 // std
 #include <array>
 #include <iostream>
 #include <bitset>
 
+namespace duthomhas
+{
+    struct csprng;
+}
+
 using ykey_t = XXH128_hash_t;
-using block = std::array<uint32_t, 16>;
 
 // Function to remove and insert bits into an integer
 inline uint32_t insert_bit(uint32_t n, size_t position, bool bit) 
@@ -151,7 +150,7 @@ private:
     std::array<std::array<uint8_t, 4>, 6> randbit_tables;
 
     // The random shift data for the numbers
-    duthomhas::csprng rng;
+    duthomhas::csprng* rng;
     
     // A block of data used to transpose
     uint32_t* transpose_copy;

@@ -1,5 +1,9 @@
-#include "yao/yao.h"
+#include "include/yao.h"
 
+// Rng library
+#include "csprng/duthomhas/csprng.hpp"
+
+// std
 #include <iostream>
 #include <algorithm>
 #include <bitset>
@@ -8,6 +12,7 @@
 
 YaoCipher::YaoCipher()
 {
+    rng = new duthomhas::csprng;
     transpose_copy = new uint32_t[16];
     key = gen_key();
 
@@ -54,6 +59,7 @@ YaoCipher::YaoCipher()
 
 YaoCipher::YaoCipher(ykey_t k)
 {
+    rng = new duthomhas::csprng;
     transpose_copy = new uint32_t[16];
     key = k;
 
@@ -107,7 +113,7 @@ uint32_t* YaoCipher::round(uint32_t* input, size_t round_ct)
     }
 
     // Bitexpand
-    std::bitset<64> rng_bits = rng();
+    std::bitset<64> rng_bits = rng->operator()();
     for (size_t i = 0; i < 16; i++)
     {
         // A bitset that has a fast operation to insert a bit and remove at the back
