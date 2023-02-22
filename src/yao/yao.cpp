@@ -5,11 +5,22 @@
 #include <bitset>
 #include <vector>
 #include <cstring>
+#include <chrono>
+
+struct Timer 
+{
+    std::chrono::time_point<std::chrono::high_resolution_clock> s;
+
+    void set_time() { s = std::chrono::high_resolution_clock::now(); }
+    void print_time() { std::cout << (std::chrono::high_resolution_clock::now() - s).count() << std::endl; }
+    auto get_time() { return (std::chrono::high_resolution_clock::now() - s).count(); }
+};
 
 YaoCipher::YaoCipher()
 {
-    transpose_copy = new uint32_t[16];
     key = gen_key();
+    this->round_start = 0;
+    transpose_copy = new uint32_t[16];
 
     // Generate the subsitution tables and the inverse substitution tables
     subst_tables = gen_tables<256, 6>(key);
@@ -54,8 +65,56 @@ YaoCipher::YaoCipher()
 
 YaoCipher::YaoCipher(ykey_t k)
 {
-    transpose_copy = new uint32_t[16];
     key = k;
+    this->round_start = 0;
+    transpose_copy = new uint32_t[16];
+
+    // Generate the subsitution tables and the inverse substitution tables
+    subst_tables = gen_tables<256, 6>(key);
+    for (size_t i = 0; i < 6; i++)
+    {
+        for (size_t j = 0; j < 256; j++)
+        {
+            reverse_subst_tables[i][subst_tables[i][j]] = j;
+        }
+    }
+
+    // Generate 4 bit substitution tables and the inverses
+    subst_tables_4 = gen_tables<16, 3>(key);
+    for (size_t i = 0; i < 3; i++)
+    {
+        for (size_t j = 0; j < 16; j++)
+        {
+            rv_subst_tables_4[i][subst_tables_4[i][j]] = j;
+        }
+    }
+    
+    // Generate transposition tables and inverse transposition tables
+    ykey_t flipkey;
+    flipkey.low64 = key.high64;
+    flipkey.high64 = key.low64;
+    transpos_table = gen_rnd_array<16>(key);
+
+    for (size_t i = 0; i < 16; i++)
+    {
+        reverse_transpos_table[transpos_table[i]] = i;
+    }
+
+    // Generate bit expansion bits (the bits that will be random)
+    randbit_tables = gen_bit_tables<32>(key);
+
+    // Make sure randbit tables are sorted highest to lowest
+    for (auto array : randbit_tables)
+    {
+        std::sort(array.begin(), array.end(), std::greater<uint32_t>());
+    }
+}
+
+YaoCipher::YaoCipher(ykey_t k, uint8_t round_start)
+{
+    key = k;
+    this->round_start = round_start;
+    transpose_copy = new uint32_t[16];
 
     // Generate the subsitution tables and the inverse substitution tables
     subst_tables = gen_tables<256, 6>(key);
@@ -100,14 +159,20 @@ YaoCipher::YaoCipher(ykey_t k)
 
 uint32_t* YaoCipher::round(uint32_t* input, size_t round_ct)
 {
+    // Timer t;
+    // t.set_time();
     // Subsitute
     for (size_t i = 0; i < 16; i++)
     {
         substitute((uint8_t*) (input + i), round_ct);
     }
+    // std::cout << "substitution: " << t.get_time() << std::endl;
+    // t.set_time();
 
     // Bitexpand
     std::bitset<64> rng_bits = rng();
+    // std::cout << "rng num: " << t.get_time() << std::endl;
+    // t.set_time();
     for (size_t i = 0; i < 16; i++)
     {
         // A bitset that has a fast operation to insert a bit and remove at the back
@@ -116,6 +181,7 @@ uint32_t* YaoCipher::round(uint32_t* input, size_t round_ct)
         input[i] = insert_bit(input[i], randbit_tables[round_ct][2], rng_bits[i * 4 + 2]);
         input[i] = insert_bit(input[i], randbit_tables[round_ct][3], rng_bits[i * 4 + 3]);
     }
+    //std::cout << "bitexpand: " << t.get_time() << std::endl;
 
     return input;
 }
@@ -144,7 +210,7 @@ uint32_t* YaoCipher::unround(uint32_t* input, size_t round_ct)
 
 uint32_t* YaoCipher::encrypt_block(uint32_t* input)
 {
-    for (size_t i = 0; i < 6; i++)
+    for (size_t i = round_start; i < 6; i++)
     {
         round(input, i);
     }
@@ -160,7 +226,7 @@ uint32_t* YaoCipher::encrypt_block(uint32_t* input)
 
 uint32_t* YaoCipher::decrypt_block(uint32_t* input)
 {
-    for (int i = 5; i >= 0; i--)
+    for (int i = 5; i >= this->round_start; i--)
     {
         input = unround(input, i);
     }

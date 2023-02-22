@@ -15,7 +15,7 @@
 using ykey_t = XXH128_hash_t;
 using block = std::array<uint32_t, 16>;
 
-// Function to remove and insert bits into an integer
+// Functions to remove and insert bits into an integer
 inline uint32_t insert_bit(uint32_t n, size_t position, bool bit) 
 {
     uint32_t y = n;
@@ -28,6 +28,8 @@ inline uint32_t insert_bit(uint32_t n, size_t position, bool bit)
     y &= ~((~((uint32_t) 0)) << position);
     x |= y;
     return x;
+    // Ill get this working later
+    // return (uint32_t) (n & ((1 << position) - 1)) | (bit << position) | ((size_t) (n & (~((1 << position + 1) - 1))) << 1);
 }
 
 inline uint32_t remove_bit(uint32_t n, size_t position)
@@ -155,9 +157,13 @@ private:
     
     // A block of data used to transpose
     uint32_t* transpose_copy;
+
+    // The number of rounds that this starts at
+    uint8_t round_start;
 public: 
     YaoCipher(); 
     YaoCipher(ykey_t k);
+    YaoCipher(ykey_t k, uint8_t round_start);
     ~YaoCipher() { delete[] transpose_copy; }
 
     // Encrypt a block

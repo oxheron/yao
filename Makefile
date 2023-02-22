@@ -3,6 +3,7 @@ CC = clang++
 
 SRC = $(wildcard src/*.cpp) $(wildcard src/**/*.cpp) $(wildcard src/**/**/*.cpp) $(wildcard src/**/**/**/*.cpp)
 OBJ = $(SRC:.cpp=.o)
+ASM = $(SRC:.cpp=.S)
 BIN = bin
 LIBS =
 
@@ -37,6 +38,9 @@ asm: cleanassembly $(ASM)
 
 %.o: %.cpp
 	$(CC) -std=c++20 -o $@ -c $< $(RELEASEFLAGS)
+
+%.S: %.cpp
+	$(CC) -std=c++20 -o $@ -S $< $(RELEASEFLAGS)
 
 build: dirs link
 
