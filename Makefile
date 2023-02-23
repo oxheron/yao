@@ -8,12 +8,12 @@ ASM = $(SRC:.cpp=.S)
 BIN = bin
 LIBS =
 
-INC_DIR_SRC = -Isrc 
+INC_DIR_SRC = -Isrc -I.
 
 DEBUGFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -Wall -g
 RELEASEFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -O3
 ASMFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIBS) -Wall
-LDFLAGS = $(LIBS) -lm 
+LDFLAGS = $(LIBS) 
 
 .PHONY: all libs clean test
 

@@ -152,7 +152,7 @@ private:
     std::array<std::array<uint8_t, 4>, 6> randbit_tables;
 
     // The random shift data for the numbers
-    duthomhas::csprng rng;
+    duthomhas::csprng* rng;
     
     // A block of data used to transpose
     uint32_t* transpose_copy;
