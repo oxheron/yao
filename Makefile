@@ -4,16 +4,16 @@ AR = ar
 
 SRC = $(wildcard src/*.cpp) $(wildcard src/**/*.cpp) $(wildcard src/**/**/*.cpp) $(wildcard src/**/**/**/*.cpp)
 OBJ = $(SRC:.cpp=.o)
+ASM = $(SRC:.cpp=.S)
 BIN = bin
 LIBS =
 
-INC_DIR_SRC = -Isrc -I.
-INC_DIR_LIB = -Ilib/xxHash
+INC_DIR_SRC = -Isrc 
 
 DEBUGFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -Wall -g
 RELEASEFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIB) -O3
 ASMFLAGS = $(INC_DIR_SRC) $(INC_DIR_LIBS) -Wall
-LDFLAGS = $(LIBS) 
+LDFLAGS = $(LIBS) -lm 
 
 .PHONY: all libs clean test
 
@@ -38,6 +38,9 @@ asm: cleanassembly $(ASM)
 
 %.o: %.cpp
 	$(CC) -std=c++20 -o $@ -c $< $(RELEASEFLAGS)
+
+%.S: %.cpp
+	$(CC) -std=c++20 -o $@ -S $< $(RELEASEFLAGS)
 
 build: dirs link
 

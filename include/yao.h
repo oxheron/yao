@@ -1,20 +1,20 @@
 #pragma once
 
-#include "xxhash.h"
+// Rng library
+#include "csprng/duthomhas/csprng.hpp"
+
+// Forrus++ 
+#include "forrus/forrus.h"
 
 // std
 #include <array>
 #include <iostream>
 #include <bitset>
 
-namespace duthomhas
-{
-    struct csprng;
-}
+using ykey_t = hash_t;
+using block = std::array<uint32_t, 16>;
 
-using ykey_t = XXH128_hash_t;
-
-// Function to remove and insert bits into an integer
+// Functions to remove and insert bits into an integer
 inline uint32_t insert_bit(uint32_t n, size_t position, bool bit) 
 {
     uint32_t y = n;
@@ -27,6 +27,8 @@ inline uint32_t insert_bit(uint32_t n, size_t position, bool bit)
     y &= ~((~((uint32_t) 0)) << position);
     x |= y;
     return x;
+    // Ill get this working later
+    // return (uint32_t) (n & ((1 << position) - 1)) | (bit << position) | ((size_t) (n & (~((1 << position + 1) - 1))) << 1);
 }
 
 inline uint32_t remove_bit(uint32_t n, size_t position)
@@ -53,15 +55,15 @@ constexpr std::array<uint8_t, C> gen_init_array()
 template <int C> 
 constexpr std::array<uint8_t, C> gen_rnd_array(ykey_t key)
 {
-    auto hash = XXH3_128bits(&key, 16);
-    size_t xor_hash = hash.low64 ^ hash.high64;
+    auto hash = forrus::hash((uint8_t*) &key);
+    size_t xor_hash = hash.lval ^ hash.hval;
     std::array<uint8_t, C> swapped_array = gen_init_array<C>();
 
     for (int i = C - 1; i > 0; i--)
     {
         std::swap(swapped_array[xor_hash % i], swapped_array[i]);
-        hash = XXH3_128bits(&hash, 16);
-        xor_hash = hash.low64 ^ hash.high64;
+        hash = forrus::hash((uint8_t*) &hash);
+        xor_hash = hash.lval ^ hash.hval;
     }
 
     return swapped_array;
@@ -80,9 +82,9 @@ constexpr std::array<std::array<uint8_t, T>, R> gen_tables(ykey_t key)
         // Hash that again 
         rval[i] = gen_rnd_array<T>(key);
 
-        auto hash = XXH3_128bits(&key, 16);
-        key.high64 ^= hash.low64;
-        key.low64 ^= hash.high64;
+        auto hash = forrus::hash((uint8_t*) &key);
+        key.hval ^= hash.lval;
+        key.lval ^= hash.hval;
     }
 
     return rval;
@@ -93,7 +95,7 @@ constexpr std::array<std::array<uint8_t, T>, R> gen_tables(ykey_t key)
 template <int T> 
 inline std::array<std::array<uint8_t, 4>, (T - 8) / 4> gen_bit_tables(ykey_t key)
 {
-    auto last_tables = gen_bit_tables<T - 4>(XXH3_128bits(&key, 16));
+    auto last_tables = gen_bit_tables<T - 4>(forrus::hash((uint8_t*) &key));
     std::array<std::array<uint8_t, 4>, (T - 8) / 4> rval;
 
     for (size_t i = 0; i < ((T - 12) / 4); i++)
@@ -150,13 +152,17 @@ private:
     std::array<std::array<uint8_t, 4>, 6> randbit_tables;
 
     // The random shift data for the numbers
-    duthomhas::csprng* rng;
+    duthomhas::csprng rng;
     
     // A block of data used to transpose
     uint32_t* transpose_copy;
+
+    // The number of rounds that this starts at
+    uint8_t round_start;
 public: 
     YaoCipher(); 
     YaoCipher(ykey_t k);
+    YaoCipher(ykey_t k, uint8_t round_start);
     ~YaoCipher() { delete[] transpose_copy; }
 
     // Encrypt a block
