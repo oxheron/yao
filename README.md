@@ -7,7 +7,6 @@ To start the installation process run
 
     make
 
-Then install xxHash. You can build it from source, or more instructions can be found at [https://github.com/Cyan4973/xxHash](https://github.com/Cyan4973/xxHash). 
 To use the library include include/yao.h
-Then when linking link xxHash/libxxHash and bin/libYao
+Then when linking link bin/libYao
 
