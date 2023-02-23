@@ -44,8 +44,8 @@ YaoCipher::YaoCipher()
     
     // Generate transposition tables and inverse transposition tables
     ykey_t flipkey;
-    flipkey.low64 = key.high64;
-    flipkey.high64 = key.low64;
+    flipkey.lval = key.hval;
+    flipkey.hval = key.lval;
     transpos_table = gen_rnd_array<16>(key);
 
     for (size_t i = 0; i < 16; i++)
@@ -91,8 +91,8 @@ YaoCipher::YaoCipher(ykey_t k)
     
     // Generate transposition tables and inverse transposition tables
     ykey_t flipkey;
-    flipkey.low64 = key.high64;
-    flipkey.high64 = key.low64;
+    flipkey.lval = key.hval;
+    flipkey.hval = key.lval;
     transpos_table = gen_rnd_array<16>(key);
 
     for (size_t i = 0; i < 16; i++)
@@ -138,8 +138,8 @@ YaoCipher::YaoCipher(ykey_t k, uint8_t round_start)
     
     // Generate transposition tables and inverse transposition tables
     ykey_t flipkey;
-    flipkey.low64 = key.high64;
-    flipkey.high64 = key.low64;
+    flipkey.lval = key.hval;
+    flipkey.hval = key.lval;
     transpos_table = gen_rnd_array<16>(key);
 
     for (size_t i = 0; i < 16; i++)

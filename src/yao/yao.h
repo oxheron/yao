@@ -1,18 +1,17 @@
 #pragma once
 
-// XXhash library
-// Hopefully we will use our own hash at some point (forrus++)
-#include "xxhash.h"
-
 // Rng library
 #include "csprng/duthomhas/csprng.hpp"
+
+// Forrus++ 
+#include "forrus/forrus.h"
 
 // std
 #include <array>
 #include <iostream>
 #include <bitset>
 
-using ykey_t = XXH128_hash_t;
+using ykey_t = hash_t;
 using block = std::array<uint32_t, 16>;
 
 // Functions to remove and insert bits into an integer
@@ -56,15 +55,15 @@ constexpr std::array<uint8_t, C> gen_init_array()
 template <int C> 
 constexpr std::array<uint8_t, C> gen_rnd_array(ykey_t key)
 {
-    auto hash = XXH3_128bits(&key, 16);
-    size_t xor_hash = hash.low64 ^ hash.high64;
+    auto hash = forrus::hash((uint8_t*) &key);
+    size_t xor_hash = hash.lval ^ hash.hval;
     std::array<uint8_t, C> swapped_array = gen_init_array<C>();
 
     for (int i = C - 1; i > 0; i--)
     {
         std::swap(swapped_array[xor_hash % i], swapped_array[i]);
-        hash = XXH3_128bits(&hash, 16);
-        xor_hash = hash.low64 ^ hash.high64;
+        hash = forrus::hash((uint8_t*) &hash);
+        xor_hash = hash.lval ^ hash.hval;
     }
 
     return swapped_array;
@@ -83,9 +82,9 @@ constexpr std::array<std::array<uint8_t, T>, R> gen_tables(ykey_t key)
         // Hash that again 
         rval[i] = gen_rnd_array<T>(key);
 
-        auto hash = XXH3_128bits(&key, 16);
-        key.high64 ^= hash.low64;
-        key.low64 ^= hash.high64;
+        auto hash = forrus::hash((uint8_t*) &key);
+        key.hval ^= hash.lval;
+        key.lval ^= hash.hval;
     }
 
     return rval;
@@ -96,7 +95,7 @@ constexpr std::array<std::array<uint8_t, T>, R> gen_tables(ykey_t key)
 template <int T> 
 inline std::array<std::array<uint8_t, 4>, (T - 8) / 4> gen_bit_tables(ykey_t key)
 {
-    auto last_tables = gen_bit_tables<T - 4>(XXH3_128bits(&key, 16));
+    auto last_tables = gen_bit_tables<T - 4>(forrus::hash((uint8_t*) &key));
     std::array<std::array<uint8_t, 4>, (T - 8) / 4> rval;
 
     for (size_t i = 0; i < ((T - 12) / 4); i++)
