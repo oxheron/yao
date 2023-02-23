@@ -1,4 +1,4 @@
-TARGET_EXEC = YAO
+TARGET_EXEC = libYao
 CC = clang++
 AR = ar
 
